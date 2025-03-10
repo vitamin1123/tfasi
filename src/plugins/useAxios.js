@@ -1,7 +1,8 @@
 import axios from 'axios';
-
+const baseURL = import.meta.env.VITE_API_BASE_URL;
 // 创建 Axios 实例
 const axiosInstance = axios.create({
+  baseURL: baseURL,
   timeout: 10000, // 设置请求超时时间 (10s)
 });
 

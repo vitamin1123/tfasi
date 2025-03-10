@@ -98,7 +98,8 @@ const handleSearch = () => {
 // 获取分类数据
 const fetchCategories = async () => {
   try {
-    const data = await get("https://api.yzzy-api.com/inc/apijson.php?ac=list");
+    // const data = await get("https://api.yzzy-api.com/inc/apijson.php?ac=list");
+    const data = await get("/proxy/api/get_list");
     if (data.class) {
       options.value = [{ type_id: "0", type_name: "全部" }, ...data.class];
       selectedOption.value = "0"; // 默认选中 "全部"
@@ -123,7 +124,8 @@ const fetchData = async (pg) => {
     }
 
     const { code, list, page: currentPage, pagecount: maxPage } = await get(
-      "https://api.yzzy-api.com/inc/apijson.php?ac=detail",
+      // "https://api.yzzy-api.com/inc/apijson.php?ac=detail",
+      "/proxy/api/get_detail", 
       params
     );
 

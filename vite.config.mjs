@@ -11,8 +11,12 @@ import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
 
+// 定义 API 的 baseURL
+const API_BASE_URL = 'https://tfasi.sbs/';
+
 // https://vitejs.dev/config/
 export default defineConfig({
+  // base: '/my-app/',
   plugins: [
     VueRouter(),
     Layouts(),
@@ -46,7 +50,10 @@ export default defineConfig({
       vueTemplate: true,
     }),
   ],
-  define: { 'process.env': {} },
+  define: { 
+    'import.meta.env.VITE_API_BASE_URL': JSON.stringify(API_BASE_URL),
+    'process.env': {} 
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
