@@ -38,6 +38,7 @@
               :src="item.vod_pic"
               aspect-ratio="395/326"
               class="rounded-t-lg"
+              @click="handleClick(item)"
               @load="imageLoaded"
             >
               <template #placeholder>
@@ -64,6 +65,9 @@
 import { ref, onMounted, watch, computed } from "vue";
 import Masonry from "masonry-layout";
 import { get } from "@/plugins/useAxios";
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 
 const items = ref([]);
 const options = ref([]);
@@ -85,6 +89,13 @@ const filteredItems = computed(() => {
     return isOptionMatch && isSearchMatch;
   });
 });
+
+const handleClick = (item) => {
+  router.push({
+    path: '/film_detail',
+    query: { item: JSON.stringify(item) }
+  });
+};
 
 // 处理搜索逻辑（按下回车时调用）
 const handleSearch = () => {
