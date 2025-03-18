@@ -9,6 +9,12 @@
 import * as THREE from 'three';
 import { onMounted, onBeforeUnmount, ref } from 'vue';
 
+// 新增：初始陀螺仪基准值
+const initialOrientation = {
+  beta: null,
+  gamma: null
+};
+
 // 场景、相机、渲染器
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -57,8 +63,8 @@ const material = new THREE.ShaderMaterial({
       float depthValue = depth.r;
       
       // 调整坐标系映射
-      float x = vUv.x + uMouse.x * 0.07 * depthValue;
-      float y = vUv.y + uMouse.y * 0.07 * depthValue;
+      float x = vUv.x + uMouse.x * 0.1 * depthValue;
+      float y = vUv.y + uMouse.y * 0.1 * depthValue;
       
       vec4 newColor = texture2D(uTexture, vec2(x, y));
       newColor.rgb = pow(newColor.rgb, vec3(1.0/2.2));
@@ -74,13 +80,20 @@ scene.add(plane);
 const handleOrientation = (event) => {
   if (!event.beta || !event.gamma) return;
 
-  // 坐标系转换：将手机竖直状态设为基准点
-  const calibratedBeta = event.beta - 90; // 使竖直状态时beta为0
-  const calibratedGamma = event.gamma;     // 保持原始gamma值
+  // 首次触发时记录初始基准值
+  if (initialOrientation.beta === null || initialOrientation.gamma === null) {
+    initialOrientation.beta = event.beta;
+    initialOrientation.gamma = event.gamma;
+    return;
+  }
 
-  // 映射到[-1,1]范围并保持gamma响应
-  deviceOrientation.x = THREE.MathUtils.clamp(calibratedGamma / 45, -1, 1);
-  deviceOrientation.y = THREE.MathUtils.clamp(calibratedBeta / 45, -1, 1);
+  // 计算相对于基准值的差值
+  const deltaBeta = event.beta - initialOrientation.beta;
+  const deltaGamma = event.gamma - initialOrientation.gamma;
+
+  // 映射到[-1,1]范围
+  deviceOrientation.x = THREE.MathUtils.clamp(deltaGamma / 45, -1, 1);
+  deviceOrientation.y = THREE.MathUtils.clamp(deltaBeta / 45, -1, 1);
 };
 
 // 请求设备方向权限
@@ -90,12 +103,16 @@ const requestPermission = () => {
     DeviceOrientationEvent.requestPermission()
       .then(permissionState => {
         if (permissionState === 'granted') {
+          initialOrientation.beta = null;
+          initialOrientation.gamma = null;
           permissionGranted.value = true;
           window.addEventListener('deviceorientation', handleOrientation);
         }
       })
       .catch(console.error);
   } else {
+    initialOrientation.beta = null;
+    initialOrientation.gamma = null;
     permissionGranted.value = true;
     window.addEventListener('deviceorientation', handleOrientation);
   }
@@ -130,7 +147,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
-/* 原有样式保持不变 */
 * {
   margin: 0;
   padding: 0;
@@ -144,5 +160,14 @@ canvas {
   position: fixed;
   top: 0;
   left: 0;
+}
+
+button {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 100; /* 设置较高的z-index值，确保按钮显示在canvas之上 */
+  padding: 10px 20px;
+  font-size: 16px;
 }
 </style>
