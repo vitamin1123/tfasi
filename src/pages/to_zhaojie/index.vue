@@ -53,8 +53,8 @@ const material = new THREE.ShaderMaterial({
       float depthValue = depth.r;
       
       // 调整陀螺仪灵敏度
-      float x = vUv.x + uMouse.x * 0.03 * depthValue;
-      float y = vUv.y + uMouse.y * 0.03 * depthValue;
+      float x = vUv.x + uMouse.x * 0.1 * depthValue;
+      float y = vUv.y + uMouse.y * 0.1 * depthValue;
       
       vec4 newColor = texture2D(uTexture, vec2(x, y));
       newColor.rgb = pow(newColor.rgb, vec3(1.0/2.2));
