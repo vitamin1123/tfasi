@@ -34,7 +34,7 @@ const material = new THREE.ShaderMaterial({
   uniforms: {
     uTexture: { value: texture },
     uDepthTexture: { value: depthTexture },
-    uMouse: { value: deviceOrientation }, // 使用设备方向代替鼠标
+    uMouse: { value: deviceOrientation },
   },
   vertexShader: `
     varying vec2 vUv;
@@ -52,7 +52,7 @@ const material = new THREE.ShaderMaterial({
       vec4 depth = texture2D(uDepthTexture, vUv);
       float depthValue = depth.r;
       
-      // 调整陀螺仪灵敏度
+      // 调整坐标系映射
       float x = vUv.x + uMouse.x * 0.1 * depthValue;
       float y = vUv.y + uMouse.y * 0.1 * depthValue;
       
@@ -66,16 +66,20 @@ const material = new THREE.ShaderMaterial({
 const plane = new THREE.Mesh(geometry, material);
 scene.add(plane);
 
-// 处理设备方向
+// 修改后的陀螺仪处理函数
 const handleOrientation = (event) => {
   if (!event.beta || !event.gamma) return;
-  
-  // 将陀螺仪数据映射到 [-1, 1] 范围
-  deviceOrientation.x = THREE.MathUtils.clamp(event.gamma / 45, -1, 1);
-  deviceOrientation.y = THREE.MathUtils.clamp(event.beta / 45, -1, 1);
+
+  // 坐标系转换：将手机竖直状态设为基准点
+  const calibratedBeta = event.beta - 90; // 使竖直状态时beta为0
+  const calibratedGamma = event.gamma;     // 保持原始gamma值
+
+  // 映射到[-1,1]范围并保持gamma响应
+  deviceOrientation.x = THREE.MathUtils.clamp(calibratedGamma / 45, -1, 1);
+  deviceOrientation.y = THREE.MathUtils.clamp(calibratedBeta / 45, -1, 1);
 };
 
-// 请求设备方向权限
+// 请求设备方向权限（保持不变）
 const requestPermission = () => {
   if (typeof DeviceOrientationEvent !== 'undefined' && 
       typeof DeviceOrientationEvent.requestPermission === 'function') {
@@ -91,19 +95,18 @@ const requestPermission = () => {
   }
 };
 
-// 动画循环
+// 动画循环（保持不变）
 const animate = () => {
   requestAnimationFrame(animate);
   renderer.render(scene, camera);
 };
 animate();
 
-// 生命周期
+// 生命周期（保持不变）
 onMounted(() => {
   if (isMobile) {
     requestPermission();
   } else {
-    // 保留桌面端鼠标支持
     window.addEventListener('mousemove', (event) => {
       deviceOrientation.x = (event.clientX / window.innerWidth) * 2 - 1;
       deviceOrientation.y = -(event.clientY / window.innerHeight) * 2 + 1;
