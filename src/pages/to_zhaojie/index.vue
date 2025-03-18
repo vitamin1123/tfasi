@@ -1,10 +1,13 @@
 <template>
-  <div></div>
+  <div>
+    <!-- 添加一个按钮用于触发权限请求 -->
+    <button v-if="isMobile &&!permissionGranted" @click="requestPermission">请求设备方向权限</button>
+  </div>
 </template>
 
 <script setup>
 import * as THREE from 'three';
-import { onMounted, onBeforeUnmount } from 'vue';
+import { onMounted, onBeforeUnmount, ref } from 'vue';
 
 // 场景、相机、渲染器
 const scene = new THREE.Scene();
@@ -27,6 +30,7 @@ texture.colorSpace = THREE.SRGBColorSpace;
 // 陀螺仪参数
 const deviceOrientation = new THREE.Vector2();
 let isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+const permissionGranted = ref(false);
 
 // 创建平面
 const geometry = new THREE.PlaneGeometry(6.8, 10.24);
@@ -53,8 +57,8 @@ const material = new THREE.ShaderMaterial({
       float depthValue = depth.r;
       
       // 调整坐标系映射
-      float x = vUv.x + uMouse.x * 0.1 * depthValue;
-      float y = vUv.y + uMouse.y * 0.1 * depthValue;
+      float x = vUv.x + uMouse.x * 0.07 * depthValue;
+      float y = vUv.y + uMouse.y * 0.07 * depthValue;
       
       vec4 newColor = texture2D(uTexture, vec2(x, y));
       newColor.rgb = pow(newColor.rgb, vec3(1.0/2.2));
@@ -79,33 +83,35 @@ const handleOrientation = (event) => {
   deviceOrientation.y = THREE.MathUtils.clamp(calibratedBeta / 45, -1, 1);
 };
 
-// 请求设备方向权限（保持不变）
+// 请求设备方向权限
 const requestPermission = () => {
   if (typeof DeviceOrientationEvent !== 'undefined' && 
       typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission()
       .then(permissionState => {
         if (permissionState === 'granted') {
+          permissionGranted.value = true;
           window.addEventListener('deviceorientation', handleOrientation);
         }
       })
       .catch(console.error);
   } else {
+    permissionGranted.value = true;
     window.addEventListener('deviceorientation', handleOrientation);
   }
 };
 
-// 动画循环（保持不变）
+// 动画循环
 const animate = () => {
   requestAnimationFrame(animate);
   renderer.render(scene, camera);
 };
 animate();
 
-// 生命周期（保持不变）
+// 生命周期
 onMounted(() => {
   if (isMobile) {
-    requestPermission();
+    // 不直接请求权限，等待用户点击按钮
   } else {
     window.addEventListener('mousemove', (event) => {
       deviceOrientation.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -116,6 +122,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('deviceorientation', handleOrientation);
+  window.removeEventListener('mousemove', (event) => {
+    deviceOrientation.x = (event.clientX / window.innerWidth) * 2 - 1;
+    deviceOrientation.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  });
 });
 </script>
 
