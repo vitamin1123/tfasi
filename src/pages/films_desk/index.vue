@@ -31,16 +31,16 @@
       </v-row>
     </v-container>
 
-    <!-- 紧凑型瀑布流卡片（每行7-8个） -->
+    <!-- 瀑布流卡片（纯瀑布流布局，每行约8个） -->
     <v-container class="desktop-container">
-      <div ref="masonryRef" class="masonry-desktop">
+      <div ref="masonryRef" class="masonry-waterfall">
         <div 
           v-for="item in filteredItems" 
           :key="item.vod_id" 
-          class="masonry-item-desktop"
+          class="waterfall-item"
         >
           <v-card 
-            class="compact-card"
+            class="film-card"
             @click="handleClick(item)"
           >
             <v-img
@@ -58,7 +58,10 @@
                 </v-card-subtitle>
               </template>
             </v-img>
-            <v-card-title class="px-2 py-1 text-caption">{{ item.vod_name }}</v-card-title>
+            <v-card-title class="px-2 py-1">{{ item.vod_name }}</v-card-title>
+            <v-card-text class="px-2 py-1 text-body-2">
+              {{ item.vod_content.slice(0, 50) + (item.vod_content.length > 50 ? "..." : "") }}
+            </v-card-text>
           </v-card>
         </div>
       </div>
@@ -90,7 +93,7 @@ const isLoading = ref(false);
 const masonryRef = ref(null);
 let masonryInstance = null;
 
-// 滚动加载函数
+// 滚动加载
 const onScroll = () => {
   if (isLoading.value) return;
   const threshold = 200;
@@ -100,10 +103,12 @@ const onScroll = () => {
   }
 };
 
+// 键盘事件
 const handleKeyDown = (e) => {
   if (e.key === 'Enter') handleSearch();
 };
 
+// 筛选数据
 const filteredItems = computed(() => {
   return items.value.filter((item) => {
     if (item.type_id === '19' || item.type_id === '61') return false;
@@ -115,6 +120,7 @@ const filteredItems = computed(() => {
   });
 });
 
+// 点击卡片
 const handleClick = (item) => {
   router.push({
     path: '/film_detail',
@@ -122,6 +128,7 @@ const handleClick = (item) => {
   });
 };
 
+// 搜索处理
 const handleSearch = () => {
   searchQuery.value = searchQueryInput.value;
   page.value = 1;
@@ -130,6 +137,7 @@ const handleSearch = () => {
   fetchData(1);
 };
 
+// 获取分类
 const fetchCategories = async () => {
   try {
     const data = await get("/proxy/api/get_list");
@@ -147,6 +155,7 @@ const fetchCategories = async () => {
   }
 };
 
+// 获取数据
 const fetchData = async (pg) => {
   if (isLoading.value || pg < 1 || pg > pagecount.value) return;
   isLoading.value = true;
@@ -175,6 +184,7 @@ const fetchData = async (pg) => {
   }
 };
 
+// 更新数据
 const updateItems = (newData, currentPage) => {
   if (currentPage === 1) {
     items.value = [...newData];
@@ -183,6 +193,7 @@ const updateItems = (newData, currentPage) => {
   }
 };
 
+// 图片加载完成
 const imageLoaded = () => {
   nextTick(() => {
     masonryInstance?.reloadItems();
@@ -190,16 +201,18 @@ const imageLoaded = () => {
   });
 };
 
+// 初始化
 onMounted(async () => {
   window.addEventListener("scroll", onScroll);
   await fetchCategories();
   fetchData(1);
 
+  // 纯瀑布流配置（自动适应列数）
   masonryInstance = new Masonry(masonryRef.value, {
-    itemSelector: ".masonry-item-desktop",
-    columnWidth: 160,
-    percentPosition: false,
-    gutter: 8,
+    itemSelector: ".waterfall-item",
+    columnWidth: 200, // 基础宽度（约8列/行）
+    gutter: 12,
+    fitWidth: true, // 自动适应容器
     transitionDuration: 0
   });
 
@@ -211,83 +224,83 @@ onMounted(async () => {
   });
 });
 
+// 销毁
 onUnmounted(() => {
   window.removeEventListener("scroll", onScroll);
 });
 </script>
 
 <style scoped>
-/* 紧凑布局样式 */
+/* 搜索栏样式 */
+.custom-sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #000;
+  border-radius: 12px;
+  padding: 8px 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  max-width: 95%;
+  margin: 0 auto;
+  margin-top: 8px;
+}
+
+/* 瀑布流容器 */
 .desktop-container {
-  max-width: 2000px !important;
-  padding: 12px !important;
+  max-width: 1800px;
+  padding: 16px;
+  margin: 0 auto;
 }
 
-.masonry-desktop {
-  display: flex;
-  flex-wrap: wrap;
-  margin: -4px;
-}
-
-.masonry-item-desktop {
-  width: 160px; /* 固定宽度 */
-  margin: 4px;
-  box-sizing: border-box;
-}
-
-.compact-card {
+.masonry-waterfall {
   width: 100%;
-  height: 100%;
-  transition: all 0.2s;
 }
 
-/* 紧凑卡片内容 */
-.v-img {
-  border-radius: 8px 8px 0 0 !important;
+/* 瀑布流项目 */
+.waterfall-item {
+  width: 200px;
+  margin-bottom: 16px;
+  break-inside: avoid;
 }
 
+/* 卡片样式 */
+.film-card {
+  width: 100%;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+/* 卡片内容 */
 .v-card-title {
-  font-size: 0.75rem !important;
-  line-height: 1.2;
-  padding: 8px 6px !important;
-  white-space: nowrap;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  padding: 8px 12px 0;
 }
 
-.v-card-subtitle {
-  font-size: 0.6rem !important;
-  padding: 2px 4px !important;
-}
-
-/* 响应式列数调整（基于最小宽度） */
-@media (min-width: 2400px) {
-  .masonry-item-desktop {
-    width: 140px; /* 超宽屏更紧凑 */
-  }
-}
-
-@media (max-width: 1600px) {
-  .masonry-item-desktop {
-    width: 180px; /* 稍大保证可读性 */
-  }
-}
-
-@media (max-width: 1200px) {
-  .masonry-item-desktop {
-    width: calc(20% - 8px); /* 5列 */
-  }
-}
-
-@media (max-width: 800px) {
-  .masonry-item-desktop {
-    width: calc(25% - 8px); /* 4列 */
-  }
+.v-card-text {
+  font-size: 0.8rem;
+  color: #616161;
+  line-height: 1.4;
+  padding: 4px 12px 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* 悬停效果 */
-.compact-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15) !important;
+.film-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 图片样式 */
+.v-img {
+  border-radius: 8px 8px 0 0 !important;
 }
 </style>
