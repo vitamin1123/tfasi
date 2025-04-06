@@ -66,6 +66,7 @@ import { ref, onMounted, watch, computed } from "vue";
 import Masonry from "masonry-layout";
 import { get } from "@/plugins/useAxios";
 import { useRouter } from 'vue-router';
+import { UAParser } from 'ua-parser-js';
 
 const router = useRouter();
 
@@ -81,7 +82,10 @@ const isLoading = ref(false);
 // 计算筛选后的数据
 const filteredItems = computed(() => {
   return items.value.filter((item) => {
-    const isOptionMatch = selectedOption.value === "0" || item.tag === selectedOption.value;
+    if (item.type_id === '19' || item.type_id === '61') {
+      return false;
+    }
+    const isOptionMatch = selectedOption.value === "0" || item.type_id === selectedOption.value;
     const isSearchMatch =
       !searchQuery.value ||
       item.vod_name.includes(searchQuery.value) ||
@@ -112,7 +116,15 @@ const fetchCategories = async () => {
     // const data = await get("https://api.yzzy-api.com/inc/apijson.php?ac=list");
     const data = await get("/proxy/api/get_list");
     if (data.class) {
-      options.value = [{ type_id: "0", type_name: "全部" }, ...data.class];
+      // options.value = [{ type_id: "0", type_name: "全部" }, ...data.class];
+      const filteredClasses = data.class.filter(
+        item => item.type_id !== '19' && item.type_id !== '61'
+      );
+      
+      options.value = [
+        { type_id: "0", type_name: "全部" }, 
+        ...filteredClasses
+      ];
       selectedOption.value = "0"; // 默认选中 "全部"
     }
   } catch (error) {
@@ -122,12 +134,13 @@ const fetchCategories = async () => {
 
 // 获取数据
 const fetchData = async (pg) => {
+  console.log('fetchData',isLoading.value, pg, pagecount.value)
   if (isLoading.value || pg < 1 || pg > pagecount.value) return;
   isLoading.value = true;
 
   try {
     const params = {
-      type: selectedOption.value,
+      t: selectedOption.value,
       pg,
     };
     if (searchQuery.value) {
@@ -139,7 +152,7 @@ const fetchData = async (pg) => {
       "/proxy/api/get_detail", 
       params
     );
-
+    console.log('fetchData1',code, list, currentPage, maxPage)
     if (code === 1) {
       page.value = currentPage;
       pagecount.value = maxPage;
@@ -163,9 +176,11 @@ const updateItems = (newData, currentPage) => {
   // } else {
   //   items.value = [...newData];
   // }
+  console.log('updateItems',newData, currentPage)
   if (currentPage === 1) {
     // 如果是第一页，直接替换所有数据
     items.value = [...newData];
+    console.log('filteredItems: ',filteredItems.value)
   } else {
     // 如果是后续页，累加数据
     items.value.push(...newData);
@@ -204,6 +219,13 @@ const imageLoaded = () => {
 };
 
 onMounted(async () => {
+  const parser = new UAParser();
+  const ua_result = parser.getResult();
+  if (ua_result.device.type === 'mobile') {
+    console.log('移动端');
+  } else {
+    router.replace('/films_desk'); // 非移动端跳转
+  }
   window.addEventListener("scroll", onScroll);
   await fetchCategories();
   fetchData(1);
@@ -262,6 +284,14 @@ onUnmounted(() => {
   position: sticky;
   top: 0;
   z-index: 10;
+
+  background-color: #000;
+  border-radius:  0.5rem;
+  padding: 4px 16px; /* 减少上下内边距 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  max-width: 95%; /* 限制宽度 */
+  margin: 0 auto; /* 居中 */
+  margin-top: 8px; /* 顶部留白 */
 }
 
 .v-card-title {
