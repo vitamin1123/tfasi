@@ -31,8 +31,7 @@
     animationSpeed: 0.03,
     colors: {
       base: 0x3498db,
-      highlight: 0xe74c3c,
-      character: 0xffcc00 // 汉字方块的特殊颜色
+      highlight: 0xe74c3c
     },
     transitions: {
       duration: 2000,
@@ -40,8 +39,7 @@
     },
     character: {
       char: '赵', // 要显示的汉字
-      size: 16,   // HZK16字库是16x16点阵
-      foreground: true // 是否显示汉字
+      size: 16   // HZK16字库是16x16点阵
     }
   };
 
@@ -138,7 +136,7 @@ const ranges = [
   let transitionStart = 0;
   let isTransitioning = false;
   let nextAnimationType = null;
-  let characterBlocks = []; // 存储组成汉字的方块
+  let characterMatrix = []; // 存储汉字点阵数据
   
   // 初始化场景
   function init() {
@@ -179,10 +177,8 @@ const ranges = [
     // 创建897个长方形方块
     createBlocks();
   
-    // 在中央显示汉字
-    if (config.character.foreground) {
-      displayCharacter(config.character.char);
-    }
+    // 获取汉字点阵数据
+    characterMatrix = getCharacterMatrix(config.character.char);
   
     // 开始动画循环
     animate();
@@ -235,10 +231,8 @@ const ranges = [
     }
   }
   
-  // 在中央显示汉字
-  function displayCharacter(char) {
-    const matrix = getCharacterMatrix(char);
-    console.log('赵： ',matrix)
+  // 检查是否是汉字方块
+  function isCharacterBlock(row, col) {
     const charSize = config.character.size;
     const totalRows = config.rows;
     const totalCols = config.cols;
@@ -247,29 +241,13 @@ const ranges = [
     const startRow = Math.floor((totalRows - charSize) / 2);
     const startCol = Math.floor((totalCols - charSize) / 2);
     
-    // 清空之前的汉字方块标记
-    characterBlocks.forEach(index => {
-      blocks[index].userData.isCharacterBlock = false;
-      blocks[index].material.color.setHex(config.colors.base);
-    });
-    characterBlocks = [];
+    const i = row - startRow;
+    const j = col - startCol;
     
-    // 标记组成汉字的方块
-    for (let i = 0; i < charSize; i++) {
-      for (let j = 0; j < charSize; j++) {
-        if (matrix[i] && matrix[i][j]) {
-          const row = startRow + i;
-          const col = startCol + j;
-          
-          if (row >= 0 && row < totalRows && col >= 0 && col < totalCols) {
-            const index = row * totalCols + col;
-            blocks[index].userData.isCharacterBlock = true;
-            blocks[index].material.color.setHex(config.colors.character);
-            characterBlocks.push(index);
-          }
-        }
-      }
-    }
+    return i >= 0 && i < charSize && 
+           j >= 0 && j < charSize && 
+           characterMatrix[i] && 
+           characterMatrix[i][j];
   }
   
   // 动画循环
@@ -295,13 +273,6 @@ const ranges = [
     
     // 更新方块位置和颜色
     blocks.forEach((block, index) => {
-      // 汉字方块不受动画影响
-      if (block.userData.isCharacterBlock) {
-        block.userData.targetY = config.blockHeight / 2;
-        block.position.y = config.blockHeight / 2;
-        return;
-      }
-      
       // 平滑过渡到目标高度
       block.position.y += (block.userData.targetY - block.position.y) * config.animationSpeed;
       
@@ -328,20 +299,27 @@ const ranges = [
     renderer.render(scene, camera);
   }
   
-  // 中心波浪动画 (修改版，跳过汉字方块)
+  // 中心波浪动画 (修改版，汉字方块在波浪高峰时固定)
   function centerWaveAnimation() {
     const centerRow = config.rows / 2 - 0.5;
     const centerCol = config.cols / 2 - 0.5;
     const time = Date.now() * 0.002;
     
     blocks.forEach(block => {
-      if (block.userData.isCharacterBlock) return;
-      
       const dx = block.userData.col - centerCol;
       const dz = block.userData.row - centerRow;
       const distance = Math.sqrt(dx * dx + dz * dz);
       
-      const wave = Math.sin(distance * 0.3 - time) * 1.5;
+      let wave = Math.sin(distance * 0.3 - time) * 1.5;
+      
+      // 如果是汉字方块且在波浪高峰附近，固定到最高点
+      if (isCharacterBlock(block.userData.row, block.userData.col)) {
+        const wavePos = distance * 0.3 - time;
+        if (Math.abs(wavePos % (Math.PI * 2) - Math.PI/2 < 0.5)) {
+          wave = 1.5; // 固定到最高点
+        }
+      }
+      
       block.userData.targetY = wave + (config.blockHeight / 2);
       
       const colorFactor = (wave + 1.5) / 3;
@@ -353,15 +331,22 @@ const ranges = [
     });
   }
   
-  // 对角线波浪动画 (修改版，跳过汉字方块)
+  // 对角线波浪动画 (修改版，汉字方块在波浪高峰时固定)
   function diagonalWaveAnimation() {
     const time = Date.now() * 0.002;
     
     blocks.forEach(block => {
-      if (block.userData.isCharacterBlock) return;
-      
       const diagonalPos = (block.userData.col / config.cols) + (block.userData.row / config.rows);
-      const wave = Math.sin(diagonalPos * 8 - time) * 2;
+      let wave = Math.sin(diagonalPos * 8 - time) * 2;
+      
+      // 如果是汉字方块且在波浪高峰附近，固定到最高点
+      if (isCharacterBlock(block.userData.row, block.userData.col)) {
+        const wavePos = diagonalPos * 8 - time;
+        if (Math.abs(wavePos % (Math.PI * 2) - Math.PI/2 < 0.5)) {
+          wave = 2; // 固定到最高点
+        }
+      }
+      
       block.userData.targetY = wave + (config.blockHeight / 2);
       
       const gradient = (block.userData.col + block.userData.row) / (config.cols + config.rows);
@@ -373,21 +358,28 @@ const ranges = [
     });
   }
   
-  // 螺旋波浪动画 (修改版，跳过汉字方块)
+  // 螺旋波浪动画 (修改版，汉字方块在波浪高峰时固定)
   function spiralWaveAnimation() {
     const centerRow = config.rows / 2 - 0.5;
     const centerCol = config.cols / 2 - 0.5;
     const time = Date.now() * 0.0015;
     
     blocks.forEach(block => {
-      if (block.userData.isCharacterBlock) return;
-      
       const dx = block.userData.col - centerCol;
       const dz = block.userData.row - centerRow;
       const distance = Math.sqrt(dx * dx + dz * dz);
       const angle = Math.atan2(dz, dx);
       
-      const wave = Math.sin(distance * 0.2 + angle * 2 - time) * 1.8;
+      let wave = Math.sin(distance * 0.2 + angle * 2 - time) * 1.8;
+      
+      // 如果是汉字方块且在波浪高峰附近，固定到最高点
+      if (isCharacterBlock(block.userData.row, block.userData.col)) {
+        const wavePos = distance * 0.2 + angle * 2 - time;
+        if (Math.abs(wavePos % (Math.PI * 2) - Math.PI/2 < 0.5)) {
+          wave = 1.8; // 固定到最高点
+        }
+      }
+      
       block.userData.targetY = wave + (config.blockHeight / 2);
       
       const spiralFactor = ((angle + Math.PI) / (Math.PI * 2) + distance * 0.05) % 1;
@@ -399,17 +391,23 @@ const ranges = [
     });
   }
   
-  // 随机波动动画 (修改版，跳过汉字方块)
+  // 随机波动动画 (修改版，汉字方块在波浪高峰时固定)
   function randomWaveAnimation() {
     const time = Date.now() * 0.002;
     
     blocks.forEach(block => {
-      if (block.userData.isCharacterBlock) return;
-      
       const seed = block.userData.row * config.cols + block.userData.col;
-      const wave = Math.sin(seed + time) * 
-                   Math.sin(seed * 0.3 + time * 0.7) * 
-                   Math.sin(seed * 0.1 + time * 0.3) * 1.5;
+      let wave = Math.sin(seed + time) * 
+               Math.sin(seed * 0.3 + time * 0.7) * 
+               Math.sin(seed * 0.1 + time * 0.3) * 1.5;
+      
+      // 如果是汉字方块且在波浪高峰附近，固定到最高点
+      if (isCharacterBlock(block.userData.row, block.userData.col)) {
+        const wavePos = seed + time;
+        if (Math.abs(wavePos % (Math.PI * 2) - Math.PI/2 < 0.5)) {
+          wave = 1.5; // 固定到最高点
+        }
+      }
       
       block.userData.targetY = wave + (config.blockHeight / 2);
       
@@ -436,16 +434,12 @@ const ranges = [
     });
   }
   
-  // 过渡到平整状态 (修改版，保持汉字方块平整)
+  // 过渡到平整状态
   function transitionToFlat(callback) {
     isTransitioning = true;
     transitionStart = Date.now();
     
     blocks.forEach(block => {
-      if (block.userData.isCharacterBlock) {
-        block.userData.targetY = config.blockHeight / 2;
-        return;
-      }
       block.userData.transitionStartY = block.userData.targetY;
       block.userData.targetY = config.blockHeight / 2;
       block.userData.targetColor = block.userData.baseColor;
@@ -454,15 +448,10 @@ const ranges = [
     setTimeout(callback, config.transitions.duration);
   }
   
-  // 重置所有方块 (修改版，保持汉字方块)
+  // 重置所有方块
   function resetBlocks() {
     startWave(null);
     currentAnimation = null;
-    
-    // 重新显示汉字
-    if (config.character.foreground) {
-      displayCharacter(config.character.char);
-    }
   }
   
   onMounted(async() => {
