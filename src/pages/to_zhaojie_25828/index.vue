@@ -1,12 +1,12 @@
 <template>
   <div ref="container" class="three-container">
-    <div class="controls">
+    <!-- <div class="controls">
       <button @click="startWave('center')">中心波浪</button>
       <button @click="startWave('diagonal')">对角线波浪</button>
       <button @click="startWave('peripheryToCenter')">外围到中心</button>
       <button @click="startWave('random')">随机波动</button>
       <button @click="resetBlocks">重置</button>
-    </div>
+    </div> -->
   </div>
 </template>
 
@@ -30,15 +30,15 @@ const config = {
   blockHeight: 5,
   animationSpeed: 0.03,
   colors: {
-    base: 0xBEBEBE,
-    highlight: 0xFFE4B5,
+    base: 0xffdfd4,
+    highlight: 0xded2d2,
     character: 0xffcc00
   },
   transitions: {
     duration: 2000,
     easing: t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
   },
-  characters: ['赵', '洁', '生', '日', '快', '乐'],
+  characters: ['赵', '洁', '同', '学', '开', '心','每','一','天'],
   characterDisplayTime: 18000,
   characterSize: 16,
   animationDuration: 18000, // 每个动画的持续时间
@@ -167,8 +167,8 @@ function init() {
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
-  controls.minDistance = 40;
-  controls.maxDistance = 200;
+  controls.minDistance = 10;
+  controls.maxDistance = 100;
 
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
   scene.add(ambientLight);
