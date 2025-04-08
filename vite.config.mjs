@@ -13,6 +13,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 // 定义 API 的 baseURL
 const API_BASE_URL = 'https://tfasi.sbs/';
+// const API_BASE_URL = 'https://xairry.ip-ddns.com/';
 
 // https://vitejs.dev/config/
 export default defineConfig({
