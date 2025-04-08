@@ -32,13 +32,13 @@ const config = {
   colors: {
     base: 0xffdfd4,
     highlight: 0xded2d2,
-    character: 0xffcc00
+    character: 0xfaabb7
   },
   transitions: {
     duration: 2000,
     easing: t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
   },
-  characters: ['赵', '洁', '同', '学', '开', '心','每','一','天'],
+  characters: ['赵', '洁',  '开', '心','每','一','天'],
   characterDisplayTime: 18000,
   characterSize: 16,
   animationDuration: 18000, // 每个动画的持续时间
