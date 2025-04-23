@@ -19,9 +19,9 @@ const TO_SCREEN_DURATION = 6; // 飞向屏幕
 const SCREEN_DURATION = 4;     // 屏幕停留
 const TEXT_DURATION = 10;      // 文字动画
 const FIREWORK_DURATION = 12;  // 烟花动画
+const ROSE_DURATION = 15;      // 玫瑰花动画
 
 // 创建视频播放器元素
-
 const createVideoElement = () => {
   const videoDiv = document.createElement('div');
   videoDiv.style.width = '500px'; // 增大尺寸
@@ -92,6 +92,52 @@ const createFireworkShape = () => {
   return points;
 };
 
+// 创建玫瑰花形状 (基于提供的代码)
+const createRoseShape = () => {
+  const rosePoints = [];
+  const m = Math;
+  const C = m.cos, S = m.sin, P = m.pow, R = m.random;
+  const f = 500, h = -250;
+  
+  function p(a,b,c) {
+    if(c>60) return [S(a*7)*(13+5/(.2+P(b*4,4)))-S(b)*50,b*f+50,625+C(a*7)*(13+5/(.2+P(b*4,4)))+b*400,a*1-b/2,a];
+    const A=a*2-1, B=b*2-1;
+    if(A*A+B*B<1) {
+      if(c>37) {
+        const n=(c&1)?6:4, o=.5/(a+.01)+C(b*125)*3-a*300, w=b*h;
+        return [o*C(n)+w*S(n)+(c&1)*610-390,o*S(n)-w*C(n)+550-(c&1)*350,1180+C(B+A)*99-(c&1)*300,.4-a*.1+P(1-B*B,-h*6)*.15-a*b*.4+C(a+b)/5+P(C((o*(a+1)+(B>0?w:-w))/25),30)*.1*(1-B*B),o/1e3+.7-o*w*3e-6];
+      }
+      if(c>32) {
+        let c2=c*1.16-.15, o=a*45-20, w=b*b*h;
+        const z=o*S(c2)+w*C(c2)+620;
+        return [o*C(c2)-w*S(c2),28+C(B*.5)*99-b*b*b*60-z/2-h,z,(b*b*.3+P((1-(A*A)),7)*.15+.3)*b,b*.7];
+      }
+      const o=A*(2-b)*(80-c*2), w=99-C(A)*120-C(b)*(-h-c*4.9)+C(P(1-b,7))*50+c*2;
+      const z=o*S(c)+w*C(c)+700;
+      return [o*C(c)-w*S(c),B*99-C(P(b,7))*50-c/3-z/1.35+450,z,(1-b/1.2)*.9+a*.1,P((1-b),20)/4+.05];
+    }
+    return null;
+  }
+  
+  // 生成玫瑰花的点
+  for(let i=0; i<10000; i++) {
+    const s = p(R(), R(), i%46/.74);
+    if(s) {
+      // 调整玫瑰大小、位置和方向，使其正面朝向相机
+      rosePoints.push({
+        x: s[0]/100,       // 缩小X轴
+        y: -s[1]/100,      // 缩小并翻转Y轴
+        z: -s[2]/100 - 5,  // 缩小并翻转Z轴，使其朝向相机
+        r: ~(s[3]*h)/255,  // 红色分量
+        g: ~(s[4]*h)/255,  // 绿色分量
+        b: ~(s[3]*s[3]*-80)/255 // 蓝色分量
+      });
+    }
+  }
+  
+  return rosePoints;
+};
+
 // 加载汉字图片并离散为点阵 (映射到屏幕点阵)
 const loadChineseCharacter = async () => {
   return new Promise((resolve) => {
@@ -157,8 +203,6 @@ onMounted(async () => {
   const loader = new THREE.CubeTextureLoader().setPath('./assets/city/');
   scene.background = await loader.loadAsync(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg']);
 
-
-
   controls = new OrbitControls(camera, renderer.domElement);
   controls.minDistance = 5;
   controls.maxDistance = 50;
@@ -166,9 +210,10 @@ onMounted(async () => {
   // 创建环境光
   scene.add(new THREE.AmbientLight(0x404040));
 
-  // 加载汉字点阵和烟花形状
+  // 加载汉字点阵、烟花形状和玫瑰花形状
   const chinesePoints = await loadChineseCharacter();
   const fireworkPoints = createFireworkShape();
+  const rosePoints = createRoseShape();
   const screenPoints = createScreenPoints();
   
   // 创建点阵系统
@@ -187,9 +232,9 @@ onMounted(async () => {
 
   // 初始化位置 - 集中在中心但保留Y轴初始位置
   for(let i = 0; i < POINT_COUNT; i++) {
-    positions[i*3] = (Math.random() - 0.5) * 2; // X轴小范围随机
-    positions[i*3+1] = (Math.random() - 0.5) * 0.5; // Y轴更集中
-    positions[i*3+2] = (Math.random() - 0.5) * 2; // Z轴小范围随机
+    positions[i*3] = (Math.random() - 0.5) * 20; // X轴小范围随机
+    positions[i*3+1] = (Math.random() - 0.5) * 1; // Y轴更集中
+    positions[i*3+2] = (Math.random() - 0.5) * 20; // Z轴小范围随机
     
     // 存储初始Y位置用于单轴扩散
     initialYPositions[i] = positions[i*3+1];
@@ -240,6 +285,7 @@ onMounted(async () => {
       case 'screen': stageDuration = SCREEN_DURATION; break;
       case 'text': stageDuration = TEXT_DURATION; break;
       case 'firework': stageDuration = FIREWORK_DURATION; break;
+      case 'rose': stageDuration = ROSE_DURATION; break;
     }
     
     progress = Math.min(elapsed / (stageDuration * 1000), 1);
@@ -250,15 +296,26 @@ onMounted(async () => {
 
     // 颜色动画
     for(let i = 0; i < POINT_COUNT; i++) {
-      const hue = (i / POINT_COUNT + time * 0.02) % 1;
-      let brightness = 0.7;
-      if(currentStage === 'screen' || currentStage === 'text') brightness = 0.9;
+      let hue, brightness = 0.7;
       
-      const pulse = Math.sin(time * 3 + i * 0.001) * 0.1 + 0.9;
-      const color = new THREE.Color().setHSL(hue, 1.0, brightness * pulse);
-      colors[i*3] = color.r;
-      colors[i*3+1] = color.g;
-      colors[i*3+2] = color.b;
+      if(currentStage === 'rose') {
+        // 使用玫瑰花的颜色
+        const point = rosePoints[i % rosePoints.length] || {r:1,g:0,b:1};
+        colors[i*3] = point.r;
+        colors[i*3+1] = point.g;
+        colors[i*3+2] = point.b;
+        brightness = 0.9;
+      } else {
+        // 其他阶段的彩虹色
+        hue = (i / POINT_COUNT + time * 0.02) % 1;
+        if(currentStage === 'screen' || currentStage === 'text') brightness = 0.9;
+        
+        const pulse = Math.sin(time * 3 + i * 0.001) * 0.1 + 0.9;
+        const color = new THREE.Color().setHSL(hue, 1.0, brightness * pulse);
+        colors[i*3] = color.r;
+        colors[i*3+1] = color.g;
+        colors[i*3+2] = color.b;
+      }
     }
 
     // 阶段转换逻辑
@@ -274,7 +331,8 @@ onMounted(async () => {
           case 'toScreen': currentStage = 'screen'; break;
           case 'screen': currentStage = 'text'; break;
           case 'text': currentStage = 'firework'; break;
-          case 'firework': currentStage = 'screen'; break;
+          case 'firework': currentStage = 'rose'; break;
+          case 'rose': currentStage = 'screen'; break;
         }
       }
     }
@@ -324,6 +382,14 @@ onMounted(async () => {
         targetZ = point.z;
         sizes[i] = 0.25; // 统一大小
       }
+      else if(currentStage === 'rose') {
+        // 玫瑰花形状
+        const point = rosePoints[i % rosePoints.length] || {x:0,y:0,z:0};
+        targetX = point.x;
+        targetY = point.y;
+        targetZ = point.z;
+        sizes[i] = 0.3; // 稍微大一点的点
+      }
       
       // 平滑移动
       positions[i*3] += (targetX - positions[i*3]) * 0.1;
@@ -332,7 +398,7 @@ onMounted(async () => {
     }
 
     // 动态调整点大小
-    if(currentStage === 'text' || currentStage === 'firework') {
+    if(currentStage === 'text' || currentStage === 'firework' || currentStage === 'rose') {
       points.material.size = 0.25 + Math.sin(time * 2) * 0.05;
     } else {
       points.material.size = 0.2;
