@@ -20,11 +20,150 @@ const SCREEN_DURATION = 4;     // 屏幕停留
 const TEXT_DURATION = 10;      // 文字动画
 const FIREWORK_DURATION = 12;  // 烟花动画
 const ROSE_DURATION = 15;      // 玫瑰花动画
+const HEART_DURATION = 8;      // 心形动画
+
+// 运动烟花类
+class MovingFirework {
+  constructor() {
+    this.particles = [];
+    this.geometry = new THREE.BufferGeometry();
+    this.count = 1000; // 粒子数量
+    this.positions = new Float32Array(this.count * 3);
+    this.velocities = [];
+    this.colors = new Float32Array(this.count * 3);
+    this.sizes = new Float32Array(this.count);
+    this.life = new Float32Array(this.count);
+
+    // 随机起始位置
+    const x = (Math.random() * 2 - 1) * 30;
+    const y = (Math.random() * 2 - 1) * 25;
+    const z = (Math.random() * 2 - 1) * 20;
+
+    for (let i = 0; i < this.count; i++) {
+      const phi = Math.random() * Math.PI * 2;
+      const theta = Math.random() * Math.PI;
+      const velocity = 2 + Math.random() * 2;
+
+      this.velocities.push(
+        velocity * Math.sin(theta) * Math.cos(phi),
+        velocity * Math.sin(theta) * Math.sin(phi),
+        velocity * Math.cos(theta)
+      );
+
+      this.positions[i * 3] = x;
+      this.positions[i * 3 + 1] = y;
+      this.positions[i * 3 + 2] = z;
+
+      // 多彩颜色
+      const hue = Math.random();
+      const color = new THREE.Color().setHSL(hue, 1.0, 0.7);
+      this.colors[i * 3] = color.r;
+      this.colors[i * 3 + 1] = color.g;
+      this.colors[i * 3 + 2] = color.b;
+
+      this.sizes[i] = 0.5;
+      this.life[i] = 1.0;
+    }
+
+    this.geometry.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
+    this.geometry.setAttribute('color', new THREE.BufferAttribute(this.colors, 3));
+    this.geometry.setAttribute('size', new THREE.BufferAttribute(this.sizes, 1));
+
+    const material = new THREE.PointsMaterial({
+      size: 0.5,
+      vertexColors: true,
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      opacity: 0.8,
+    });
+
+    this.points = new THREE.Points(this.geometry, material);
+    scene.add(this.points);
+  }
+
+  update() {
+    let alive = false;
+    for (let i = 0; i < this.count; i++) {
+      if (this.life[i] > 0) {
+        alive = true;
+        this.positions[i * 3] += this.velocities[i * 3] * 0.1;
+        this.positions[i * 3 + 1] += this.velocities[i * 3 + 1] * 0.1;
+        this.positions[i * 3 + 2] += this.velocities[i * 3 + 2] * 0.1;
+
+        // 重力效果
+        this.velocities[i * 3 + 1] -= 0.05;
+
+        this.life[i] -= 0.01;
+        this.sizes[i] = this.life[i] * 0.5;
+      }
+    }
+
+    this.geometry.attributes.position.needsUpdate = true;
+    this.geometry.attributes.size.needsUpdate = true;
+
+    return alive;
+  }
+
+  dispose() {
+    scene.remove(this.points);
+    this.geometry.dispose();
+    this.points.material.dispose();
+  }
+}
+
+// 存储运动烟花实例
+const movingFireworks = [];
+
+// 创建心形点阵的函数
+const generateHeartPoints = (width, height) => {
+  const points = Array.from({ length: height }, () => Array(width).fill(0));
+  const centerX = width / 2;
+  const centerY = height / 2 - 5;
+  
+  // 大心形参数
+  const bigHeartPoints = [];
+  for (let t = 0; t < 2 * Math.PI; t += 0.01) {
+    const x = 16 * Math.pow(Math.sin(t), 3);
+    const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+    bigHeartPoints.push({x, y});
+  }
+  
+  // 小心形参数
+  const smallHeartPoints = [];
+  for (let t = 0; t < 2 * Math.PI; t += 0.01) {
+    const x = 12 * Math.pow(Math.sin(t), 3);
+    const y = 9.75 * Math.cos(t) - 3.75 * Math.cos(2*t) - 1.5 * Math.cos(3*t) - 0.75 * Math.cos(4*t);
+    smallHeartPoints.push({x, y});
+  }
+  
+  // 填充大心形
+  bigHeartPoints.forEach(point => {
+    const px = Math.round(centerX + point.x * 0.9);
+    const py = Math.round(centerY - point.y * 0.9);
+    if (px >= 0 && px < width && py >= 0 && py < height) {
+      points[py][px] = 2;
+    }
+  });
+  
+  // 填充小心形
+  smallHeartPoints.forEach(point => {
+    const px = Math.round(centerX + point.x * 0.9);
+    const py = Math.round(centerY - point.y * 0.9);
+    if (px >= 0 && px < width && py >= 0 && py < height && points[py][px] === 0) {
+      points[py][px] = 1;
+    }
+  });
+  
+  return points;
+};
+
+// 生成80x63的心形点阵
+const heartPoints = generateHeartPoints(COLS, ROWS);
 
 // 创建视频播放器元素
 const createVideoElement = () => {
   const videoDiv = document.createElement('div');
-  videoDiv.style.width = '500px'; // 增大尺寸
+  videoDiv.style.width = '500px';
   videoDiv.style.height = '400px';
   videoDiv.style.backgroundColor = '#000';
   videoDiv.style.position = 'absolute';
@@ -34,32 +173,30 @@ const createVideoElement = () => {
   iframe.style.width = '100%';
   iframe.style.height = '100%';
   iframe.style.border = '0';
-  iframe.src = '//player.bilibili.com/player.html?isOutside=true&aid=886441191&bvid=BV1jK4y1p7Hg&cid=290464814&p=1&autoplay=true&muted=0';
+  iframe.src = '//player.bilibili.com/player.html?isOutside=true&aid=886441191&bvid=BV1jK4y1p7Hg&cid=290464814&p=1&autoplay=true';
   videoDiv.appendChild(iframe);
 
-  // 创建3D平面对象来承载视频
   const object = new CSS3DObject(videoDiv);
-  object.position.set(0, 0, -30); // 放在更远的位置
-  object.scale.set(0.08, 0.08, 0.08); // 适当缩放
+  object.position.set(0, 0, -30);
+  object.scale.set(0.08, 0.08, 0.08);
   
-  // 创建一个组来包含视频对象，方便调整
   const group = new THREE.Group();
   group.add(object);
-  group.position.set(0, 0, -50); // 整体位置
+  group.position.set(0, 0, -50);
   
   return group;
 };
 
-// 创建屏幕像素点阵 (精确整数网格)
+// 创建屏幕像素点阵
 const createScreenPoints = () => {
   const points = [];
-  const width = 8;  // 屏幕物理宽度
-  const height = width * (ROWS / COLS); // 保持比例
+  const width = 8;
+  const height = width * (ROWS / COLS);
   
   for(let row = 0; row < ROWS; row++) {
     for(let col = 0; col < COLS; col++) {
       const index = row * COLS + col;
-      points.push({
+      points.push({ 
         x: (col / COLS - 0.5) * width,
         y: (0.5 - row / ROWS) * height,
         z: 0,
@@ -72,12 +209,12 @@ const createScreenPoints = () => {
   return points;
 };
 
-// 烟花形状定义 (放大版)
+// 烟花形状定义
 const createFireworkShape = () => {
   const points = [];
   const layers = 5;
   for(let l = 0; l < layers; l++) {
-    const radius = 0.8 + l * 0.5; // 增大半径
+    const radius = 0.8 + l * 0.5;
     const count = 100 + l * 50;
     for(let i = 0; i < count; i++) {
       const angle = (i * 2 * Math.PI) / count;
@@ -92,7 +229,7 @@ const createFireworkShape = () => {
   return points;
 };
 
-// 创建玫瑰花形状 (基于提供的代码)
+// 创建玫瑰花形状
 const createRoseShape = () => {
   const rosePoints = [];
   const m = Math;
@@ -119,18 +256,16 @@ const createRoseShape = () => {
     return null;
   }
   
-  // 生成玫瑰花的点
   for(let i=0; i<10000; i++) {
     const s = p(R(), R(), i%46/.74);
     if(s) {
-      // 调整玫瑰大小、位置和方向，使其正面朝向相机
       rosePoints.push({
-        x: s[0]/100,       // 缩小X轴
-        y: -s[1]/100,      // 缩小并翻转Y轴
-        z: -s[2]/100 - 5,  // 缩小并翻转Z轴，使其朝向相机
-        r: ~(s[3]*h)/255,  // 红色分量
-        g: ~(s[4]*h)/255,  // 绿色分量
-        b: ~(s[3]*s[3]*-80)/255 // 蓝色分量
+        x: s[0]/100,
+        y: -s[1]/100,
+        z: -s[2]/100 - 5,
+        r: ~(s[3]*h)/255,
+        g: ~(s[4]*h)/255,
+        b: ~(s[3]*s[3]*-80)/255
       });
     }
   }
@@ -138,7 +273,7 @@ const createRoseShape = () => {
   return rosePoints;
 };
 
-// 加载汉字图片并离散为点阵 (映射到屏幕点阵)
+// 加载汉字图片并离散为点阵
 const loadChineseCharacter = async () => {
   return new Promise((resolve) => {
     const img = new Image();
@@ -147,7 +282,7 @@ const loadChineseCharacter = async () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = COLS;
-      canvas.height = ROWS; // 使用屏幕点阵分辨率
+      canvas.height = ROWS;
       ctx.drawImage(img, 0, 0, COLS, ROWS);
       
       const imageData = ctx.getImageData(0, 0, COLS, ROWS);
@@ -157,7 +292,7 @@ const loadChineseCharacter = async () => {
       for(let row = 0; row < ROWS; row++) {
         for(let col = 0; col < COLS; col++) {
           const index = (row * COLS + col) * 4;
-          if(data[index + 3] > 128) { // 半透明以上视为有效点
+          if(data[index + 3] > 128) {
             points.push({ 
               row, 
               col,
@@ -187,13 +322,13 @@ onMounted(async () => {
   css3dRenderer.setSize(window.innerWidth, window.innerHeight);
   css3dRenderer.domElement.style.position = 'absolute';
   css3dRenderer.domElement.style.top = '0';
-  css3dRenderer.domElement.style.pointerEvents = 'none'; // 防止遮挡交互
+  css3dRenderer.domElement.style.pointerEvents = 'none';
   container.value.appendChild(css3dRenderer.domElement);
   // 关键修改：确保CSS3D渲染器在WebGL渲染器之后渲染
   const originalRender = css3dRenderer.render.bind(css3dRenderer);
   css3dRenderer.render = (scene, camera) => {
-    renderer.render(scene, camera); // 先渲染WebGL内容
-    originalRender(scene, camera); // 再渲染CSS3D内容
+    renderer.render(scene, camera);
+    originalRender(scene, camera);
   };
   // 添加视频播放器
   const videoElement = createVideoElement();
@@ -230,16 +365,14 @@ onMounted(async () => {
     if(index < POINT_COUNT) activePoints[index] = true;
   });
 
-  // 初始化位置 - 集中在中心但保留Y轴初始位置
+  // 初始化位置
   for(let i = 0; i < POINT_COUNT; i++) {
-    positions[i*3] = (Math.random() - 0.5) * 20; // X轴小范围随机
-    positions[i*3+1] = (Math.random() - 0.5) * 1; // Y轴更集中
-    positions[i*3+2] = (Math.random() - 0.5) * 20; // Z轴小范围随机
+    positions[i*3] = (Math.random() - 0.5) * 20;
+    positions[i*3+1] = (Math.random() - 0.5) * 1;
+    positions[i*3+2] = (Math.random() - 0.5) * 20;
     
-    // 存储初始Y位置用于单轴扩散
     initialYPositions[i] = positions[i*3+1];
     
-    // 彩虹色
     const hue = i / POINT_COUNT;
     const color = new THREE.Color().setHSL(hue, 1.0, 0.7);
     colors[i*3] = color.r;
@@ -267,8 +400,21 @@ onMounted(async () => {
 
   // 动画控制
   let animationStartTime = Date.now();
-  let currentStage = 'initial'; // 初始扩散阶段
+  let currentStage = 'initial';
+  let nextStage = 'toScreen';
   let initialSpreadComplete = false;
+  let transitionStartTime = 0;
+  let isTransitioning = false;
+  let transitionProgress = 0;
+  let transitionDuration = 2.5;
+  let currentPositions = [];
+  let targetPositions = [];
+
+  // 初始化位置数组
+  for(let i = 0; i < POINT_COUNT; i++) {
+    currentPositions[i] = {x: positions[i*3], y: positions[i*3+1], z: positions[i*3+2]};
+    targetPositions[i] = {x: positions[i*3], y: positions[i*3+1], z: positions[i*3+2]};
+  }
 
   const animate = () => {
     requestAnimationFrame(animate);
@@ -283,6 +429,7 @@ onMounted(async () => {
       case 'initial': stageDuration = INITIAL_DURATION; break;
       case 'toScreen': stageDuration = TO_SCREEN_DURATION; break;
       case 'screen': stageDuration = SCREEN_DURATION; break;
+      case 'heart': stageDuration = HEART_DURATION; break;
       case 'text': stageDuration = TEXT_DURATION; break;
       case 'firework': stageDuration = FIREWORK_DURATION; break;
       case 'rose': stageDuration = ROSE_DURATION; break;
@@ -294,19 +441,59 @@ onMounted(async () => {
     const positions = points.geometry.attributes.position.array;
     const colors = points.geometry.attributes.color.array;
 
+    // 随机生成运动烟花
+    if (currentStage === 'firework' && Math.random() < 0.03) {
+      movingFireworks.push(new MovingFirework());
+    }
+
+    // 更新运动烟花
+    for (let i = movingFireworks.length - 1; i >= 0; i--) {
+      const alive = movingFireworks[i].update();
+      if (!alive) {
+        movingFireworks[i].dispose();
+        movingFireworks.splice(i, 1);
+      }
+    }
+
     // 颜色动画
     for(let i = 0; i < POINT_COUNT; i++) {
       let hue, brightness = 0.7;
       
-      if(currentStage === 'rose') {
-        // 使用玫瑰花的颜色
+      if(currentStage === 'rose' || (isTransitioning && nextStage === 'rose')) {
         const point = rosePoints[i % rosePoints.length] || {r:1,g:0,b:1};
         colors[i*3] = point.r;
         colors[i*3+1] = point.g;
         colors[i*3+2] = point.b;
         brightness = 0.9;
-      } else {
-        // 其他阶段的彩虹色
+      } 
+      else if(currentStage === 'heart') {
+        const row = Math.floor(i / COLS);
+        const col = i % COLS;
+        const heartValue = heartPoints[row]?.[col] || 0;
+        
+        if(heartValue > 0) {
+          const pulse = 0.7 + Math.sin(time * 2.5) * 0.3;
+          const hueShift = Math.sin(time * 0.5) * 0.05;
+          
+          if(heartValue === 2) {
+            colors[i*3] = 1.0;
+            colors[i*3+1] = 0.2 + hueShift;
+            colors[i*3+2] = 0.2 + hueShift;
+            sizes[i] = 0.35 + Math.sin(time * 3.5) * 0.1;
+          } else {
+            colors[i*3] = 1.0;
+            colors[i*3+1] = 0.4 + hueShift;
+            colors[i*3+2] = 0.4 + hueShift;
+            sizes[i] = 0.3 + Math.sin(time * 3) * 0.08;
+          }
+        } else {
+          colors[i*3] = 0.1;
+          colors[i*3+1] = 0.1;
+          colors[i*3+2] = 0.1;
+          sizes[i] = 0.05;
+        }
+      }
+      else {
         hue = (i / POINT_COUNT + time * 0.02) % 1;
         if(currentStage === 'screen' || currentStage === 'text') brightness = 0.9;
         
@@ -319,86 +506,176 @@ onMounted(async () => {
     }
 
     // 阶段转换逻辑
-    if(progress >= 1) {
-      if(elapsed > stageDuration * 1000 + 1000) { // 1秒延迟
-        animationStartTime = Date.now();
+    if(progress >= 1 && !isTransitioning) {
+      if(elapsed > stageDuration * 1000 + 1000) {
+        isTransitioning = true;
+        transitionStartTime = Date.now();
+        transitionProgress = 0;
+        
+        for(let i = 0; i < POINT_COUNT; i++) {
+          currentPositions[i] = {
+            x: positions[i*3],
+            y: positions[i*3+1],
+            z: positions[i*3+2]
+          };
+        }
         
         switch(currentStage) {
           case 'initial': 
-            currentStage = 'toScreen'; 
+            nextStage = 'toScreen'; 
             initialSpreadComplete = true;
             break;
-          case 'toScreen': currentStage = 'screen'; break;
-          case 'screen': currentStage = 'text'; break;
-          case 'text': currentStage = 'firework'; break;
-          case 'firework': currentStage = 'rose'; break;
-          case 'rose': currentStage = 'screen'; break;
+          case 'toScreen': nextStage = 'screen'; break;
+          case 'screen': nextStage = 'heart'; break;
+          case 'heart': nextStage = 'text'; break;
+          case 'text': nextStage = 'firework'; break;
+          case 'firework': nextStage = 'rose'; break;
+          case 'rose': nextStage = 'screen'; break;
+        }
+        
+        for(let i = 0; i < POINT_COUNT; i++) {
+          const screenPoint = screenPoints[i];
+          const row = Math.floor(i / COLS);
+          const col = i % COLS;
+          
+          if(nextStage === 'initial') {
+            targetPositions[i] = {
+              x: (Math.random() - 0.5) * 20,
+              y: initialYPositions[i] + (Math.random() - 0.5) * 10,
+              z: (Math.random() - 0.5) * 20
+            };
+          }
+          else if(nextStage === 'toScreen') {
+            targetPositions[i] = {
+              x: screenPoint.screenX,
+              y: screenPoint.screenY,
+              z: screenPoint.screenZ
+            };
+          }
+          else if(nextStage === 'screen' || nextStage === 'heart') {
+            targetPositions[i] = {
+              x: screenPoint.screenX,
+              y: screenPoint.screenY,
+              z: screenPoint.screenZ
+            };
+          }
+          else if(nextStage === 'text') {
+            if(activePoints[i]) {
+              targetPositions[i] = {
+                x: screenPoint.screenX,
+                y: screenPoint.screenY,
+                z: screenPoint.screenZ
+              };
+            } else {
+              targetPositions[i] = {x: 0, y: 0, z: 0};
+            }
+          }
+          else if(nextStage === 'firework') {
+            const point = fireworkPoints[i % fireworkPoints.length] || {x:0,y:0,z:0};
+            targetPositions[i] = {
+              x: point.x,
+              y: point.y,
+              z: point.z
+            };
+          }
+          else if(nextStage === 'rose') {
+            const point = rosePoints[i % rosePoints.length] || {x:0,y:0,z:0};
+            targetPositions[i] = {
+              x: point.x,
+              y: point.y,
+              z: point.z
+            };
+          }
         }
       }
     }
 
-    // 应用当前阶段动画
-    for(let i = 0; i < POINT_COUNT; i++) {
-      const screenPoint = screenPoints[i];
-      let targetX, targetY, targetZ;
+    // 处理过渡动画
+    if(isTransitioning) {
+      transitionProgress = Math.min((Date.now() - transitionStartTime) / (transitionDuration * 1000), 1);
       
-      if(currentStage === 'initial') {
-        // 单轴(Y轴)扩散动画
-        const spreadFactor = Math.sin(time * 0.2 + i * 0.01) * 10 * progress; // Y轴扩散因子
-        targetX = positions[i*3] + (Math.random() - 0.5) * 0.1;
-        targetY = initialYPositions[i] + spreadFactor; // 主要在Y轴上扩散
-        targetZ = positions[i*3+2] + (Math.random() - 0.5) * 0.1;
+      const easedProgress = easeInOutCubic(transitionProgress);
+      
+      for(let i = 0; i < POINT_COUNT; i++) {
+        positions[i*3] = currentPositions[i].x + (targetPositions[i].x - currentPositions[i].x) * easedProgress;
+        positions[i*3+1] = currentPositions[i].y + (targetPositions[i].y - currentPositions[i].y) * easedProgress;
+        positions[i*3+2] = currentPositions[i].z + (targetPositions[i].z - currentPositions[i].z) * easedProgress;
+        
+        if(nextStage === 'text') {
+          if(activePoints[i]) {
+            sizes[i] = 0.1 + 0.2 * easedProgress;
+          } else {
+            sizes[i] = 0.1 - 0.05 * easedProgress;
+          }
+        }
+        else if(nextStage === 'firework' || nextStage === 'rose' || nextStage === 'heart') {
+          sizes[i] = 0.1 + 0.15 * easedProgress;
+        }
       }
-      else if(currentStage === 'toScreen') {
-        // 飞向屏幕位置
-        const flyProgress = easeOutCubic(progress);
-        targetX = screenPoint.screenX * flyProgress;
-        targetY = screenPoint.screenY * flyProgress;
-        targetZ = screenPoint.screenZ * flyProgress;
+      
+      if(transitionProgress >= 1) {
+        isTransitioning = false;
+        currentStage = nextStage;
+        animationStartTime = Date.now();
       }
-      else if(currentStage === 'screen') {
-        // 精确屏幕位置
-        targetX = screenPoint.screenX;
-        targetY = screenPoint.screenY;
-        targetZ = screenPoint.screenZ;
-      }
-      else if(currentStage === 'text') {
-        // 文字形状 - 只激活汉字对应的点
-        if(activePoints[i]) {
+    } 
+    else {
+      for(let i = 0; i < POINT_COUNT; i++) {
+        const screenPoint = screenPoints[i];
+        let targetX, targetY, targetZ;
+        
+        if(currentStage === 'initial') {
+          const spreadFactor = Math.sin(time * 0.2 + i * 0.01) * 10 * progress;
+          targetX = positions[i*3] + (Math.random() - 0.5) * 0.1;
+          targetY = initialYPositions[i] + spreadFactor;
+          targetZ = positions[i*3+2] + (Math.random() - 0.5) * 0.1;
+        }
+        else if(currentStage === 'toScreen') {
+          const flyProgress = easeOutCubic(progress);
+          targetX = screenPoint.screenX * flyProgress;
+          targetY = screenPoint.screenY * flyProgress;
+          targetZ = screenPoint.screenZ * flyProgress;
+        }
+        else if(currentStage === 'screen' || currentStage === 'heart') {
           targetX = screenPoint.screenX;
           targetY = screenPoint.screenY;
           targetZ = screenPoint.screenZ;
-          sizes[i] = 0.3; // 放大活跃点
-        } else {
-          targetX = targetY = targetZ = 0; // 非活跃点移动到中心
-          sizes[i] = 0.05; // 缩小非活跃点
         }
+        else if(currentStage === 'text') {
+          if(activePoints[i]) {
+            targetX = screenPoint.screenX;
+            targetY = screenPoint.screenY;
+            targetZ = screenPoint.screenZ;
+            sizes[i] = 0.3;
+          } else {
+            targetX = targetY = targetZ = 0;
+            sizes[i] = 0.05;
+          }
+        }
+        else if(currentStage === 'firework') {
+          const point = fireworkPoints[i % fireworkPoints.length] || {x:0,y:0,z:0};
+          targetX = point.x;
+          targetY = point.y;
+          targetZ = point.z;
+          sizes[i] = 0.25;
+        }
+        else if(currentStage === 'rose') {
+          const point = rosePoints[i % rosePoints.length] || {x:0,y:0,z:0};
+          targetX = point.x;
+          targetY = point.y;
+          targetZ = point.z;
+          sizes[i] = 0.3;
+        }
+        
+        positions[i*3] += (targetX - positions[i*3]) * 0.1;
+        positions[i*3+1] += (targetY - positions[i*3+1]) * 0.1;
+        positions[i*3+2] += (targetZ - positions[i*3+2]) * 0.1;
       }
-      else if(currentStage === 'firework') {
-        // 烟花形状 - 均匀分布
-        const point = fireworkPoints[i % fireworkPoints.length] || {x:0,y:0,z:0};
-        targetX = point.x;
-        targetY = point.y;
-        targetZ = point.z;
-        sizes[i] = 0.25; // 统一大小
-      }
-      else if(currentStage === 'rose') {
-        // 玫瑰花形状
-        const point = rosePoints[i % rosePoints.length] || {x:0,y:0,z:0};
-        targetX = point.x;
-        targetY = point.y;
-        targetZ = point.z;
-        sizes[i] = 0.3; // 稍微大一点的点
-      }
-      
-      // 平滑移动
-      positions[i*3] += (targetX - positions[i*3]) * 0.1;
-      positions[i*3+1] += (targetY - positions[i*3+1]) * 0.1;
-      positions[i*3+2] += (targetZ - positions[i*3+2]) * 0.1;
     }
 
     // 动态调整点大小
-    if(currentStage === 'text' || currentStage === 'firework' || currentStage === 'rose') {
+    if(currentStage === 'text' || currentStage === 'firework' || currentStage === 'rose' || currentStage === 'heart' || 
+       (isTransitioning && (nextStage === 'text' || nextStage === 'firework' || nextStage === 'rose' || nextStage === 'heart'))) {
       points.material.size = 0.25 + Math.sin(time * 2) * 0.05;
     } else {
       points.material.size = 0.2;
@@ -416,6 +693,10 @@ onMounted(async () => {
   // 缓动函数
   function easeOutCubic(t) {
     return 1 - Math.pow(1 - t, 3);
+  }
+  
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   }
 
   animate();
@@ -446,7 +727,6 @@ body {
   background: #000;
 }
 
-/* 确保视频播放器在最上层 */
 #container {
   position: relative;
 }
