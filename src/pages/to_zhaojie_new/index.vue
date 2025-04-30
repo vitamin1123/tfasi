@@ -401,6 +401,21 @@ onMounted(async () => {
   // 动画控制
   let animationStartTime = Date.now();
   let currentStage = 'initial';
+  
+  // 摄像机动画控制
+  let isCameraRotated = false;
+  let isCameraPanned = false;
+  const cameraRotationDuration = 10; // 旋转动画持续时间(秒)
+  const cameraPanDuration = 10;      // 平移动画持续时间(秒)
+  const cameraRotationStartTime = Date.now();
+  const cameraPanStartTime = Date.now() + cameraRotationDuration * 1000;
+  const initialCameraPosition = new THREE.Vector3(0, 0, 15);
+  const targetPanPosition = new THREE.Vector3(-10, 3.5, 15); // 向左平移的目标位置
+  
+  // 缓动函数
+  const easeInOutCubic = (t) => {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  };
   let nextStage = 'toScreen';
   let initialSpreadComplete = false;
   let transitionStartTime = 0;
@@ -420,6 +435,41 @@ onMounted(async () => {
     requestAnimationFrame(animate);
     
     const time = Date.now() * 0.001;
+    
+    // 摄像机旋转动画
+    // if (!isCameraRotated) {
+    //   const angle = Math.PI / 9; // 20度
+    //   const radius = 15;
+    //   const elapsed = Date.now() - cameraRotationStartTime;
+    //   const progress = Math.min(elapsed / (cameraRotationDuration * 1000), 1);
+      
+    //   if (progress < 1) {
+    //     const easedProgress = easeInOutCubic(progress);
+    //     const currentAngle = easedProgress * angle;
+    //     camera.position.x = radius * -Math.sin(currentAngle);
+    //     camera.position.z = radius * Math.cos(currentAngle);
+    //     camera.lookAt(0, 0, 0);
+    //   } else {
+    //     isCameraRotated = true;
+    //   }
+    // }
+    // 摄像机平移动画
+    if (!isCameraPanned ) {
+      const elapsed = Date.now() - cameraPanStartTime;
+      const progress = Math.min(elapsed / (cameraPanDuration * 1000), 1);
+      
+      if (progress < 1) {
+        const easedProgress = easeInOutCubic(progress);
+        camera.position.x = initialCameraPosition.x + (targetPanPosition.x - initialCameraPosition.x) * easedProgress;
+        camera.position.z = initialCameraPosition.z + (targetPanPosition.z - initialCameraPosition.z) * easedProgress;
+        camera.position.y = initialCameraPosition.y + (targetPanPosition.y - initialCameraPosition.y) * easedProgress;
+        camera.lookAt(0, 0, 0);
+      } else {
+        isCameraPanned = true;
+        controls.enabled = true; // 恢复用户控制
+      }
+    }
+    
     const elapsed = Date.now() - animationStartTime;
     let progress = 0;
     let stageDuration = INITIAL_DURATION;
@@ -695,9 +745,9 @@ onMounted(async () => {
     return 1 - Math.pow(1 - t, 3);
   }
   
-  function easeInOutCubic(t) {
-    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-  }
+  // function easeInOutCubic(t) {
+  //   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  // }
 
   animate();
   window.addEventListener('resize', onWindowResize);
