@@ -29,7 +29,7 @@ document.body.appendChild(renderer.domElement);
 
 // 加载纹理
 const textureLoader = new THREE.TextureLoader();
-const texture = textureLoader.load('/assets/zhaojie.png');
+const texture = textureLoader.load('/assets/zhaojie1.png');
 const depthTexture = textureLoader.load('/assets/zhaojie1.png');
 texture.colorSpace = THREE.SRGBColorSpace;
 

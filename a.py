@@ -29,10 +29,12 @@ async def proxy_get_list(request: Request):
         merged_params = {**base_params, **frontend_params}  # 合并参数（前端参数优先级更高）
 
         async with httpx.AsyncClient() as client:
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
             # 发起代理请求（设置 8 秒超时）
             response = await client.get(
                 "https://api.yzzy-api.com/inc/apijson.php",
                 params=merged_params,
+                headers=headers,
                 timeout=8.0
             )
             
@@ -63,24 +65,24 @@ async def proxy_get_list(request: Request):
     
 @app.get("/proxy/api/get_detail")
 async def proxy_get_detail(request: Request):
-    """
-    代理详情数据请求
-    前端请求示例：/proxy/api/get_detail?type=1&pg=2&wd=test → 转发为 ?ac=detail&type=1&pg=2&wd=test
-    """
+    """代理详情数据请求"""
     try:
-        # 合并固定参数和前端参数
         base_params = {"ac": "detail"}
         frontend_params = dict(request.query_params)
         merged_params = {**base_params, **frontend_params}
 
+        # 推荐方案：使用client.get()
         async with httpx.AsyncClient() as client:
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
             response = await client.get(
                 "https://api.yzzy-api.com/inc/apijson.php",
                 params=merged_params,
-                timeout=10.0
+                headers=headers,
+                timeout=8.0  # 正确设置超时位置
             )
-            response.raise_for_status()  # 自动处理 4xx/5xx 状态码
-            
+            # print("最终请求链接:", response.url)
+            # print("返回值:", response.text)
+            response.raise_for_status()
             return response.json()
 
     except httpx.HTTPStatusError as e:

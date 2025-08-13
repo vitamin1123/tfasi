@@ -85,7 +85,7 @@ const createMeteorLines = () => {
 const loadChineseCharacter = async () => {
   return new Promise((resolve) => {
     const img = new Image();
-    img.src = './assets/imgs/赵洁.png';
+    img.src = './assets/imgs/*.png';
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');

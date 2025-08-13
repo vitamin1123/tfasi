@@ -43,7 +43,7 @@ const createFireworkShape = () => {
 const loadChineseCharacter = async () => {
   return new Promise((resolve) => {
     const img = new Image();
-    img.src = './assets/imgs/赵洁.png'; // 替换为你的汉字图片路径
+    img.src = './assets/imgs/*.png'; 
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');

@@ -173,8 +173,8 @@ const createVideoElement = () => {
   iframe.style.width = '100%';
   iframe.style.height = '100%';
   iframe.style.border = '0';
-  iframe.src = '//player.bilibili.com/player.html?isOutside=true&aid=886441191&bvid=BV1jK4y1p7Hg&cid=290464814&p=1&autoplay=true';
-  //iframe.src = '//player.bilibili.com/player.html?isOutside=true&aid=8795554&bvid=BV1Ux411y7XT&cid=205097595&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"';
+  iframe.src = '//player.bilibili.com/player.html?isOutside=true&aid=114993035025344&bvid=BV1KTtmzwERc&cid=31569349280&p=1&autoplay=true';
+  // <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=114993035025344&bvid=BV1KTtmzwERc&cid=31569349280&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
   videoDiv.appendChild(iframe);
 
   const object = new CSS3DObject(videoDiv);
@@ -278,7 +278,7 @@ const createRoseShape = () => {
 const loadChineseCharacter = async () => {
   return new Promise((resolve) => {
     const img = new Image();
-    img.src = './assets/imgs/赵洁.png';
+    img.src = './assets/imgs/*.png';
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
