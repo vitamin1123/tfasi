@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  font-family: 'Inter', sans-serif; /* 你可以换成其他字体 */
+  background-color: #0a0a0a; /* 非常深的背景色 */
+  color: #e5e5e5;
+}
